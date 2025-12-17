@@ -588,66 +588,95 @@ echo "</ul>";
 
 ```sql
 -- 1. สร้างฐานข้อมูล
-CREATE DATABASE IF NOT EXISTS school_db;
-USE school_db;
+CREATE DATABASE IF NOT EXISTS workshop_db CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+USE workshop_db;
 
--- 2. สร้างตาราง students
-CREATE TABLE students (
-    student_id INT AUTO_INCREMENT PRIMARY KEY,
-    firstname VARCHAR(100) NOT NULL,
-    lastname VARCHAR(100) NOT NULL,
-    age INT,
-    gender ENUM('Male', 'Female', 'Other'),
-    enroll_date DATE
+-- 2. สร้างตารางหมวดหมู่สินค้า
+CREATE TABLE categories (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    name VARCHAR(100) NOT NULL,
+    description TEXT,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+-- 3. สร้างตารางสินค้า
+CREATE TABLE products (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    name VARCHAR(150) NOT NULL,
+    price DECIMAL(10,2) NOT NULL,
+    stock INT NOT NULL DEFAULT 0,
+    category_id INT,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (category_id) REFERENCES categories(id) ON DELETE SET NULL
 );
 ```
 
 **หมายเหตุ:**
-- `PRIMARY KEY` - ห้ามซ้ำ
+- `PRIMARY KEY` - ห้ามซ้ำ, ใช้เป็น ID หลัก
 - `AUTO_INCREMENT` - รันเลขเองอัตโนมัติ
 - `VARCHAR` - ข้อความสั้น
 - `INT` - ตัวเลขจำนวนเต็ม
+- `DECIMAL(10,2)` - ตัวเลขทศนิยม (เก็บราคา)
+- `FOREIGN KEY` - เชื่อมโยงกับตารางอื่น
+- `ON DELETE SET NULL` - เมื่อลบหมวดหมู่ ให้ตั้ง category_id เป็น NULL
 
 #### Basic CRUD (Create, Read, Update, Delete)
 
 ```sql
 -- 1. INSERT (เพิ่มข้อมูล)
-INSERT INTO students (firstname, lastname, age, gender, enroll_date)
-VALUES ('Somchai', 'Jaidee', 20, 'Male', '2024-01-15');
+-- เพิ่มหมวดหมู่
+INSERT INTO categories (name, description)
+VALUES ('Computer Accessories', 'อุปกรณ์เสริมคอมพิวเตอร์');
 
-INSERT INTO students (firstname, lastname, age, gender, enroll_date)
-VALUES ('Somsri', 'Rakrian', 19, 'Female', '2024-02-01');
+INSERT INTO categories (name, description)
+VALUES ('Gaming Gear', 'อุปกรณ์เกมมิ่ง');
 
-INSERT INTO students (firstname, lastname, age, gender, enroll_date)
-VALUES ('John', 'Doe', 22, 'Male', '2023-12-01');
+-- เพิ่มสินค้า
+INSERT INTO products (name, price, stock, category_id)
+VALUES ('Gaming Mouse', 1290.00, 10, 2);
+
+INSERT INTO products (name, price, stock, category_id)
+VALUES ('Mechanical Keyboard', 2500.00, 5, 2);
+
+INSERT INTO products (name, price, stock, category_id)
+VALUES ('USB-C Hub', 890.00, 15, 1);
 
 -- 2. SELECT (ดึงข้อมูล)
-SELECT * FROM students;
-SELECT firstname, lastname FROM students;
+SELECT * FROM products;
+SELECT name, price, stock FROM products;
 
 -- 3. UPDATE (แก้ไขข้อมูล)
-UPDATE students
-SET age = 21
-WHERE firstname = 'Somchai';
+UPDATE products
+SET price = 1190.00, stock = 15
+WHERE name = 'Gaming Mouse';
 
 -- 4. DELETE (ลบข้อมูล)
-DELETE FROM students WHERE firstname = 'John';
+DELETE FROM products WHERE id = 3;
 ```
 
 #### Advanced Queries (Filtering & Ordering)
 
 ```sql
--- หาคนที่อายุมากกว่า 19 ปี
-SELECT * FROM students WHERE age > 19;
+-- หาสินค้าที่ราคามากกว่า 1000 บาท
+SELECT * FROM products WHERE price > 1000;
 
--- หาคนที่ชื่อขึ้นต้นด้วย Som... (LIKE)
-SELECT * FROM students WHERE firstname LIKE 'Som%';
+-- หาสินค้าที่ชื่อขึ้นต้นด้วย Gaming... (LIKE)
+SELECT * FROM products WHERE name LIKE 'Gaming%';
 
--- เรียงลำดับตามอายุ จากมากไปน้อย (ORDER BY)
-SELECT * FROM students ORDER BY age DESC;
+-- เรียงลำดับตามราคา จากมากไปน้อย (ORDER BY)
+SELECT * FROM products ORDER BY price DESC;
 
--- แสดงแค่ 1 คนแรก (LIMIT) - ใช้บ่อยเวลาทำ Pagination
-SELECT * FROM students LIMIT 1;
+-- แสดงแค่ 5 รายการแรก (LIMIT) - ใช้บ่อยเวลาทำ Pagination
+SELECT * FROM products LIMIT 5;
+
+-- นับจำนวนสินค้า (COUNT)
+SELECT COUNT(*) AS total_products FROM products;
+
+-- หาราคาเฉลี่ย (AVG)
+SELECT AVG(price) AS average_price FROM products;
+
+-- หาราคาสูงสุดและต่ำสุด (MAX, MIN)
+SELECT MAX(price) AS highest_price, MIN(price) AS lowest_price FROM products;
 ```
 
 ---
