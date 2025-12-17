@@ -20,6 +20,19 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && $_POST['action'] == 'create') {
     exit();
 }
 
+// UPDATE
+if ($_SERVER['REQUEST_METHOD'] == 'POST' && $_POST['action'] == 'update') {
+    $id = $_POST['id'];
+    $name = $_POST['name'];
+    $price = $_POST['price'];
+    $stock = $_POST['stock'];
+    
+    $stmt = $conn->prepare("UPDATE products SET name = ?, price = ?, stock = ? WHERE id = ?");
+    $stmt->execute([$name, $price, $stock, $id]);
+    header("Location: dashboard.php");
+    exit();
+}
+
 // DELETE
 if (isset($_GET['action']) && $_GET['action'] == 'delete') {
     $id = $_GET['id'];

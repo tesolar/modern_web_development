@@ -72,6 +72,10 @@ $products = $stmt->fetchAll();
                         <td><?php echo number_format($product['price'], 2); ?> บาท</td>
                         <td><?php echo htmlspecialchars($product['stock']); ?></td>
                         <td>
+                            <button class="btn btn-warning btn-sm" 
+                                    data-bs-toggle="modal" 
+                                    data-bs-target="#editModal" 
+                                    onclick="editProduct(<?php echo $product['id']; ?>, '<?php echo htmlspecialchars($product['name'], ENT_QUOTES); ?>', <?php echo $product['price']; ?>, <?php echo $product['stock']; ?>)">แก้ไข</button>
                             <a href="action.php?action=delete&id=<?php echo $product['id']; ?>" 
                                class="btn btn-danger btn-sm" 
                                onclick="return confirm('ต้องการลบสินค้านี้?')">ลบ</a>
@@ -120,6 +124,49 @@ $products = $stmt->fetchAll();
         </div>
     </div>
 
+    <!-- Edit Product Modal -->
+    <div class="modal fade" id="editModal" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">แก้ไขสินค้า</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <form action="action.php" method="POST">
+                    <input type="hidden" name="action" value="update">
+                    <input type="hidden" name="id" id="editId">
+                    <div class="modal-body">
+                        <div class="mb-3">
+                            <label>ชื่อสินค้า</label>
+                            <input type="text" name="name" id="editName" class="form-control" required>
+                        </div>
+                        <div class="mb-3">
+                            <label>ราคา</label>
+                            <input type="number" step="0.01" name="price" id="editPrice" class="form-control" required>
+                        </div>
+                        <div class="mb-3">
+                            <label>จำนวน</label>
+                            <input type="number" name="stock" id="editStock" class="form-control" required>
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">ยกเลิก</button>
+                        <button type="submit" class="btn btn-warning">บันทึกการแก้ไข</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        // ฟังก์ชันสำหรับเติมข้อมูลใน Edit Modal
+        function editProduct(id, name, price, stock) {
+            document.getElementById('editId').value = id;
+            document.getElementById('editName').value = name;
+            document.getElementById('editPrice').value = price;
+            document.getElementById('editStock').value = stock;
+        }
+    </script>
 </body>
 </html>

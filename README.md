@@ -69,7 +69,7 @@
 - [Secure Registration](#secure-registration-สมัครสมาชิกแบบปลอดภัย)
 - [Login System & Session](#login-system--session-ระบบยืนยันตัวตน)
 - [CRUD Operations & Security](#crud-operations--security)
-- [Create & Delete Logic](#create--delete-logic-จัดการข้อมูล)
+- [CRUD Logic - Create, Update, Delete](#crud-logic---create-update-delete)
 - [Destroy Session (Logout)](#destroy-session-logout)
 
 ### สรุป
@@ -913,9 +913,9 @@ $products = $stmt->fetchAll();
 
 ---
 
-### Create & Delete Logic (จัดการข้อมูล)
+### CRUD Logic - Create, Update, Delete
 
-สร้างไฟล์ `action.php` (Centralized Controller):
+สร้างไฟล์ `action.php` (Centralized Controller) สำหรับจัดการ CRUD Operations:
 
 ```php
 <?php
@@ -927,7 +927,7 @@ if (!isset($_SESSION['user_id'])) {
     exit();
 }
 
-// CREATE
+// CREATE - เพิ่มสินค้าใหม่
 if ($_SERVER['REQUEST_METHOD'] == 'POST' && $_POST['action'] == 'create') {
     $name = $_POST['name'];
     $price = $_POST['price'];
@@ -936,17 +936,110 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && $_POST['action'] == 'create') {
     $stmt = $conn->prepare("INSERT INTO products (name, price, stock) VALUES (?, ?, ?)");
     $stmt->execute([$name, $price, $stock]);
     header("Location: dashboard.php");
+    exit();
 }
 
-// DELETE
+// UPDATE - แก้ไขสินค้า
+if ($_SERVER['REQUEST_METHOD'] == 'POST' && $_POST['action'] == 'update') {
+    $id = $_POST['id'];
+    $name = $_POST['name'];
+    $price = $_POST['price'];
+    $stock = $_POST['stock'];
+    
+    $stmt = $conn->prepare("UPDATE products SET name = ?, price = ?, stock = ? WHERE id = ?");
+    $stmt->execute([$name, $price, $stock, $id]);
+    header("Location: dashboard.php");
+    exit();
+}
+
+// DELETE - ลบสินค้า
 if (isset($_GET['action']) && $_GET['action'] == 'delete') {
     $id = $_GET['id'];
     $stmt = $conn->prepare("DELETE FROM products WHERE id = ?");
     $stmt->execute([$id]);
     header("Location: dashboard.php");
+    exit();
 }
 ?>
 ```
+
+#### การเพิ่มปุ่ม Edit ในตาราง
+
+แก้ไขส่วน Table Cell ใน `dashboard.php`:
+
+```php
+<td>
+    <button class="btn btn-warning btn-sm" 
+            data-bs-toggle="modal" 
+            data-bs-target="#editModal" 
+            onclick="editProduct(<?php echo $product['id']; ?>, '<?php echo htmlspecialchars($product['name'], ENT_QUOTES); ?>', <?php echo $product['price']; ?>, <?php echo $product['stock']; ?>)">แก้ไข</button>
+    <a href="action.php?action=delete&id=<?php echo $product['id']; ?>" 
+       class="btn btn-danger btn-sm" 
+       onclick="return confirm('ต้องการลบสินค้านี้?')">ลบ</a>
+</td>
+```
+
+#### Edit Modal (Bootstrap)
+
+เพิ่ม Modal สำหรับแก้ไขสินค้าใน `dashboard.php`:
+
+```html
+<!-- Edit Product Modal -->
+<div class="modal fade" id="editModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">แก้ไขสินค้า</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <form action="action.php" method="POST">
+                <input type="hidden" name="action" value="update">
+                <input type="hidden" name="id" id="editId">
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label>ชื่อสินค้า</label>
+                        <input type="text" name="name" id="editName" class="form-control" required>
+                    </div>
+                    <div class="mb-3">
+                        <label>ราคา</label>
+                        <input type="number" step="0.01" name="price" id="editPrice" class="form-control" required>
+                    </div>
+                    <div class="mb-3">
+                        <label>จำนวน</label>
+                        <input type="number" name="stock" id="editStock" class="form-control" required>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">ยกเลิก</button>
+                    <button type="submit" class="btn btn-warning">บันทึกการแก้ไข</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+```
+
+#### JavaScript สำหรับเติมข้อมูลใน Edit Modal
+
+เพิ่ม JavaScript Function ใน `dashboard.php`:
+
+```javascript
+<script>
+// ฟังก์ชันสำหรับเติมข้อมูลใน Edit Modal
+function editProduct(id, name, price, stock) {
+    document.getElementById('editId').value = id;
+    document.getElementById('editName').value = name;
+    document.getElementById('editPrice').value = price;
+    document.getElementById('editStock').value = stock;
+}
+</script>
+```
+
+**หลักการทำงาน:**
+1. เมื่อคลิกปุ่ม "แก้ไข" จะเรียกฟังก์ชัน `editProduct()` พร้อมส่งข้อมูลสินค้า
+2. JavaScript จะเติมข้อมูลลงในฟอร์มของ Modal
+3. เมื่อกด Submit จะส่งข้อมูลไปที่ `action.php` พร้อม `action=update`
+4. PHP จะรัน UPDATE Query และ redirect กลับมาที่ Dashboard
 
 ---
 
