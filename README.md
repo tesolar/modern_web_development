@@ -62,6 +62,7 @@
   - [Database & Table Creation](#database--table-creation)
   - [Basic CRUD](#basic-crud-create-read-update-delete)
   - [Advanced Queries](#advanced-queries-filtering--ordering)
+  - [SQL JOIN - การรวมตาราง](#sql-join---การรวมตาราง)
 - [แบบฝึกหัดทดสอบความเข้าใจ (Challenge)](#แบบฝึกหัดทดสอบความเข้าใจ-challenge)
 
 ### Advanced Back-End & Database
@@ -651,6 +652,160 @@ SELECT * FROM students LIMIT 1;
 
 ---
 
+### SQL JOIN - การรวมตาราง
+
+#### ทำไมต้องใช้ JOIN?
+
+ในฐานข้อมูลจริง เราแยกข้อมูลออกเป็นหลายตารางเพื่อลดความซ้ำซ้อน (Normalization) แต่เวลาดึงข้อมูลมาใช้ เราต้อง **รวม (JOIN)** ตารางเหล่านั้นเข้าด้วยกัน
+
+#### ตัวอย่างโครงสร้างตาราง
+
+**ตาราง categories (หมวดหมู่สินค้า):**
+```sql
+CREATE TABLE categories (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    name VARCHAR(100) NOT NULL,
+    description TEXT
+);
+```
+
+**ตาราง products (สินค้า):**
+```sql
+CREATE TABLE products (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    name VARCHAR(150) NOT NULL,
+    price DECIMAL(10,2) NOT NULL,
+    stock INT NOT NULL,
+    category_id INT,
+    FOREIGN KEY (category_id) REFERENCES categories(id)
+);
+```
+
+---
+
+#### 1. INNER JOIN (ใช้บ่อยที่สุด)
+
+ดึงเฉพาะข้อมูลที่มีความสัมพันธ์กันในทั้ง 2 ตาราง
+
+```sql
+-- ดึงสินค้าพร้อมหมวดหมู่
+SELECT 
+    products.name AS product_name,
+    products.price,
+    categories.name AS category_name
+FROM products
+INNER JOIN categories ON products.category_id = categories.id;
+```
+
+**ผลลัพธ์:** ได้เฉพาะสินค้าที่มี `category_id` ตรงกับ `categories.id`
+
+---
+
+#### 2. LEFT JOIN (LEFT OUTER JOIN)
+
+ดึงข้อมูลทั้งหมดจากตารางซ้าย แม้ไม่มีข้อมูลที่ตรงกันในตารางขวา
+
+```sql
+-- ดึงสินค้าทั้งหมด (รวมสินค้าที่ไม่มีหมวดหมู่)
+SELECT 
+    products.name AS product_name,
+    products.price,
+    categories.name AS category_name
+FROM products
+LEFT JOIN categories ON products.category_id = categories.id;
+```
+
+**ผลลัพธ์:** ได้สินค้าทั้งหมด ถ้าสินค้าไหนไม่มีหมวดหมู่จะแสดง `NULL`
+
+---
+
+#### 3. RIGHT JOIN (RIGHT OUTER JOIN)
+
+ดึงข้อมูลทั้งหมดจากตารางขวา แม้ไม่มีข้อมูลที่ตรงกันในตารางซ้าย
+
+```sql
+-- ดึงหมวดหมู่ทั้งหมด (รวมหมวดหมู่ที่ไม่มีสินค้า)
+SELECT 
+    categories.name AS category_name,
+    products.name AS product_name
+FROM products
+RIGHT JOIN categories ON products.category_id = categories.id;
+```
+
+**ผลลัพธ์:** ได้หมวดหมู่ทั้งหมด ถ้าหมวดหมู่ไหนไม่มีสินค้าจะแสดง `NULL`
+
+---
+
+#### 4. FULL OUTER JOIN (MySQL ไม่รองรับโดยตรง)
+
+ดึงข้อมูลทั้งหมดจากทั้ง 2 ตาราง (ใน MySQL ต้องใช้ UNION)
+
+```sql
+-- วิธีทำ FULL OUTER JOIN ใน MySQL
+SELECT 
+    products.name AS product_name,
+    categories.name AS category_name
+FROM products
+LEFT JOIN categories ON products.category_id = categories.id
+UNION
+SELECT 
+    products.name AS product_name,
+    categories.name AS category_name
+FROM products
+RIGHT JOIN categories ON products.category_id = categories.id;
+```
+
+---
+
+#### 5. CROSS JOIN
+
+สร้างชุดข้อมูลทุกคู่ที่เป็นไปได้ (Cartesian Product)
+
+```sql
+-- ทุกสินค้าจับคู่กับทุกหมวดหมู่
+SELECT 
+    products.name AS product_name,
+    categories.name AS category_name
+FROM products
+CROSS JOIN categories;
+```
+
+**คำเตือน:** ใช้ระวัง! ถ้ามีสินค้า 100 รายการ และหมวดหมู่ 5 หมวด จะได้ 500 แถว
+
+---
+
+#### สรุปความแตกต่าง
+
+| ประเภท JOIN | ผลลัพธ์ |
+|-------------|---------|
+| **INNER JOIN** | เฉพาะข้อมูลที่มีความสัมพันธ์กันในทั้ง 2 ตาราง |
+| **LEFT JOIN** | ข้อมูลทั้งหมดจากตารางซ้าย + ข้อมูลที่ตรงกันจากตารางขวา |
+| **RIGHT JOIN** | ข้อมูลทั้งหมดจากตารางขวา + ข้อมูลที่ตรงกันจากตารางซ้าย |
+| **FULL OUTER JOIN** | ข้อมูลทั้งหมดจากทั้ง 2 ตาราง |
+| **CROSS JOIN** | ทุกคู่ที่เป็นไปได้ (Cartesian Product) |
+
+---
+
+#### ตัวอย่างการใช้งานจริง
+
+```sql
+-- นับจำนวนสินค้าในแต่ละหมวดหมู่
+SELECT 
+    categories.name AS category_name,
+    COUNT(products.id) AS product_count,
+    SUM(products.stock) AS total_stock
+FROM categories
+LEFT JOIN products ON categories.id = products.category_id
+GROUP BY categories.id, categories.name
+ORDER BY product_count DESC;
+```
+
+**ทดสอบด้วยตัวคุณเอง:**
+- ไปที่หน้า Dashboard → คลิกปุ่ม "📊 ดูรายงานตามหมวดหมู่ (INNER JOIN)"
+- ดูตัวอย่างการใช้ INNER JOIN ในการแสดงสินค้าตามหมวดหมู่
+
+---
+
 ### แบบฝึกหัดทดสอบความเข้าใจ (Challenge)
 
 **โจทย์:**
@@ -681,21 +836,51 @@ CREATE TABLE users (
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
--- ตารางสินค้า
+-- ตารางหมวดหมู่สินค้า
+CREATE TABLE categories (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    name VARCHAR(100) NOT NULL,
+    description TEXT,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+-- ตารางสินค้า (มี Foreign Key เชื่อมกับ categories)
 CREATE TABLE products (
     id INT AUTO_INCREMENT PRIMARY KEY,
     name VARCHAR(150) NOT NULL,
     price DECIMAL(10,2) NOT NULL,
     stock INT NOT NULL DEFAULT 0,
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    category_id INT,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (category_id) REFERENCES categories(id) ON DELETE SET NULL
 );
 
--- เพิ่มข้อมูลสินค้าตัวอย่าง
-INSERT INTO products (name, price, stock) VALUES
-('Gaming Mouse Logi', 1290.00, 10),
-('Mechanical Keyboard', 2500.00, 5),
-('Monitor 24 Inch', 4500.00, 2);
+-- เพิ่มข้อมูลหมวดหมู่สินค้า
+INSERT INTO categories (name, description) VALUES
+('Computer Accessories', 'อุปกรณ์เสริมคอมพิวเตอร์'),
+('Gaming Gear', 'อุปกรณ์เกมมิ่ง'),
+('Office Equipment', 'อุปกรณ์สำนักงาน'),
+('Mobile Accessories', 'อุปกรณ์มือถือ'),
+('Storage & Cables', 'อุปกรณ์จัดเก็บและสายเคเบิล');
+
+-- เพิ่มข้อมูลสินค้าตัวอย่าง (พร้อม category_id)
+INSERT INTO products (name, price, stock, category_id) VALUES
+('Gaming Mouse Logi', 1290.00, 10, 2),
+('Mechanical Keyboard', 2500.00, 5, 2),
+('Monitor 24 Inch', 4500.00, 2, 1),
+('Wireless Headset', 3200.00, 8, 2),
+('Gaming Chair RGB', 8900.00, 3, 2),
+('USB-C Hub 7in1', 890.00, 15, 1),
+('Webcam Full HD', 1590.00, 12, 3),
+('LED Strip Light 5M', 450.00, 25, 3),
+('External SSD 1TB', 3490.00, 7, 5),
+('Laptop Stand Aluminum', 650.00, 20, 3);
 ```
+
+**หมายเหตุ:**
+- สร้างตาราง `categories` ก่อนเพื่อให้สามารถอ้างอิงได้
+- `FOREIGN KEY` เชื่อมโยง `products.category_id` กับ `categories.id`
+- `ON DELETE SET NULL` หมายความว่าถ้าลบหมวดหมู่ สินค้าจะยังอยู่แต่ `category_id` จะเป็น `NULL`
 
 #### ไฟล์เชื่อมต่อ Database
 
@@ -807,12 +992,21 @@ if (!isset($_SESSION['user_id'])) {
     exit();
 }
 
-// Logic การค้นหา
+// Logic การค้นหา (ใช้ LEFT JOIN เพื่อแสดงหมวดหมู่ด้วย)
 $search = isset($_GET['search']) ? $_GET['search'] : '';
-$sql = "SELECT * FROM products WHERE name LIKE ? ORDER BY id DESC";
+$sql = "SELECT 
+            products.*,
+            categories.name AS category_name
+        FROM products
+        LEFT JOIN categories ON products.category_id = categories.id
+        WHERE products.name LIKE ? 
+        ORDER BY products.id DESC";
 $stmt = $conn->prepare($sql);
 $stmt->execute(["%$search%"]);
 $products = $stmt->fetchAll();
+
+// ดึงข้อมูลหมวดหมู่สำหรับ dropdown
+$categories = $conn->query("SELECT * FROM categories ORDER BY name")->fetchAll();
 ?>
 
 <!DOCTYPE html>
@@ -825,18 +1019,23 @@ $products = $stmt->fetchAll();
 <body>
     <nav class="navbar navbar-dark bg-dark">
         <div class="container-fluid">
-            <span class="navbar-brand">สวัสดี, <?php echo $_SESSION['fullname']; ?></span>
+            <span class="navbar-brand">สวัสดี, <?php echo htmlspecialchars($_SESSION['fullname']); ?></span>
             <a href="logout.php" class="btn btn-outline-light">Logout</a>
         </div>
     </nav>
 
     <div class="container mt-4">
-        <h2>จัดการสินค้า</h2>
+        <div class="d-flex justify-content-between align-items-center mb-3">
+            <h2>จัดการสินค้า</h2>
+            <a href="products_with_category.php" class="btn btn-info">
+                📊 ดูรายงานตามหมวดหมู่ (INNER JOIN)
+            </a>
+        </div>
         
         <!-- Search Form -->
         <form method="GET" class="mb-3">
             <div class="input-group">
-                <input type="text" name="search" class="form-control" placeholder="ค้นหาสินค้า..." value="<?php echo $search; ?>">
+                <input type="text" name="search" class="form-control" placeholder="ค้นหาสินค้า..." value="<?php echo htmlspecialchars($search); ?>">
                 <button class="btn btn-primary" type="submit">ค้นหา</button>
             </div>
         </form>
@@ -850,31 +1049,58 @@ $products = $stmt->fetchAll();
                 <tr>
                     <th>ID</th>
                     <th>ชื่อสินค้า</th>
+                    <th>หมวดหมู่</th>
                     <th>ราคา</th>
                     <th>จำนวน</th>
                     <th>จัดการ</th>
                 </tr>
             </thead>
             <tbody>
-                <?php foreach ($products as $product): ?>
-                <tr>
-                    <td><?php echo $product['id']; ?></td>
-                    <td><?php echo $product['name']; ?></td>
-                    <td><?php echo number_format($product['price'], 2); ?> บาท</td>
-                    <td><?php echo $product['stock']; ?></td>
-                    <td>
-                        <a href="action.php?action=delete&id=<?php echo $product['id']; ?>" 
-                           class="btn btn-danger btn-sm" 
-                           onclick="return confirm('ต้องการลบสินค้านี้?')">ลบ</a>
-                    </td>
-                </tr>
-                <?php endforeach; ?>
-            </tbody>
-        </table>
-    </div>
-
+                <?php if (count($products) > 0): ?>
+                    <?php foreach ($products as $product): ?>
     <!-- Add Product Modal -->
     <div class="modal fade" id="addModal" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">เพิ่มสินค้าใหม่</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <form action="action.php" method="POST">
+                    <input type="hidden" name="action" value="create">
+                    <div class="modal-body">
+                        <div class="mb-3">
+                            <label>ชื่อสินค้า</label>
+                            <input type="text" name="name" class="form-control" required>
+                        </div>
+                        <div class="mb-3">
+                            <label>หมวดหมู่</label>
+                            <select name="category_id" class="form-control">
+                                <option value="">-- เลือกหมวดหมู่ --</option>
+                                <?php foreach ($categories as $cat): ?>
+                                    <option value="<?php echo $cat['id']; ?>">
+                                        <?php echo htmlspecialchars($cat['name']); ?>
+                                    </option>
+                                <?php endforeach; ?>
+                            </select>
+                        </div>
+                        <div class="mb-3">
+                            <label>ราคา</label>
+                            <input type="number" step="0.01" name="price" class="form-control" required>
+                        </div>
+                        <div class="mb-3">
+                            <label>จำนวน</label>
+                            <input type="number" name="stock" class="form-control" required>
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">ยกเลิก</button>
+                        <button type="submit" class="btn btn-primary">บันทึก</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>lass="modal fade" id="addModal" tabindex="-1">
         <div class="modal-dialog">
             <div class="modal-content">
                 <div class="modal-header">
@@ -932,9 +1158,10 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && $_POST['action'] == 'create') {
     $name = $_POST['name'];
     $price = $_POST['price'];
     $stock = $_POST['stock'];
+    $category_id = !empty($_POST['category_id']) ? $_POST['category_id'] : null;
     
-    $stmt = $conn->prepare("INSERT INTO products (name, price, stock) VALUES (?, ?, ?)");
-    $stmt->execute([$name, $price, $stock]);
+    $stmt = $conn->prepare("INSERT INTO products (name, price, stock, category_id) VALUES (?, ?, ?, ?)");
+    $stmt->execute([$name, $price, $stock, $category_id]);
     header("Location: dashboard.php");
     exit();
 }
@@ -945,23 +1172,13 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && $_POST['action'] == 'update') {
     $name = $_POST['name'];
     $price = $_POST['price'];
     $stock = $_POST['stock'];
+    $category_id = !empty($_POST['category_id']) ? $_POST['category_id'] : null;
     
-    $stmt = $conn->prepare("UPDATE products SET name = ?, price = ?, stock = ? WHERE id = ?");
-    $stmt->execute([$name, $price, $stock, $id]);
+    $stmt = $conn->prepare("UPDATE products SET name = ?, price = ?, stock = ?, category_id = ? WHERE id = ?");
+    $stmt->execute([$name, $price, $stock, $category_id, $id]);
     header("Location: dashboard.php");
     exit();
 }
-
-// DELETE - ลบสินค้า
-if (isset($_GET['action']) && $_GET['action'] == 'delete') {
-    $id = $_GET['id'];
-    $stmt = $conn->prepare("DELETE FROM products WHERE id = ?");
-    $stmt->execute([$id]);
-    header("Location: dashboard.php");
-    exit();
-}
-?>
-```
 
 #### การเพิ่มปุ่ม Edit ในตาราง
 
@@ -972,13 +1189,13 @@ if (isset($_GET['action']) && $_GET['action'] == 'delete') {
     <button class="btn btn-warning btn-sm" 
             data-bs-toggle="modal" 
             data-bs-target="#editModal" 
-            onclick="editProduct(<?php echo $product['id']; ?>, '<?php echo htmlspecialchars($product['name'], ENT_QUOTES); ?>', <?php echo $product['price']; ?>, <?php echo $product['stock']; ?>)">แก้ไข</button>
+            onclick="editProduct(<?php echo $product['id']; ?>, '<?php echo htmlspecialchars($product['name'], ENT_QUOTES); ?>', <?php echo $product['price']; ?>, <?php echo $product['stock']; ?>, <?php echo $product['category_id'] ?? 'null'; ?>)">แก้ไข</button>
     <a href="action.php?action=delete&id=<?php echo $product['id']; ?>" 
        class="btn btn-danger btn-sm" 
        onclick="return confirm('ต้องการลบสินค้านี้?')">ลบ</a>
 </td>
 ```
-
+```php
 #### Edit Modal (Bootstrap)
 
 เพิ่ม Modal สำหรับแก้ไขสินค้าใน `dashboard.php`:
@@ -1001,6 +1218,17 @@ if (isset($_GET['action']) && $_GET['action'] == 'delete') {
                         <input type="text" name="name" id="editName" class="form-control" required>
                     </div>
                     <div class="mb-3">
+                        <label>หมวดหมู่</label>
+                        <select name="category_id" id="editCategoryId" class="form-control">
+                            <option value="">-- เลือกหมวดหมู่ --</option>
+                            <?php foreach ($categories as $cat): ?>
+                                <option value="<?php echo $cat['id']; ?>">
+                                    <?php echo htmlspecialchars($cat['name']); ?>
+                                </option>
+                            <?php endforeach; ?>
+                        </select>
+                    </div>
+                    <div class="mb-3">
                         <label>ราคา</label>
                         <input type="number" step="0.01" name="price" id="editPrice" class="form-control" required>
                     </div>
@@ -1017,8 +1245,8 @@ if (isset($_GET['action']) && $_GET['action'] == 'delete') {
         </div>
     </div>
 </div>
-```
-
+```                     <input type="number" name="stock" id="editStock" class="form-control" required>
+                    </div>
 #### JavaScript สำหรับเติมข้อมูลใน Edit Modal
 
 เพิ่ม JavaScript Function ใน `dashboard.php`:
@@ -1026,9 +1254,21 @@ if (isset($_GET['action']) && $_GET['action'] == 'delete') {
 ```javascript
 <script>
 // ฟังก์ชันสำหรับเติมข้อมูลใน Edit Modal
-function editProduct(id, name, price, stock) {
+function editProduct(id, name, price, stock, categoryId) {
     document.getElementById('editId').value = id;
     document.getElementById('editName').value = name;
+    document.getElementById('editPrice').value = price;
+    document.getElementById('editStock').value = stock;
+    document.getElementById('editCategoryId').value = categoryId || '';
+}
+</script>
+```
+
+**หลักการทำงาน:**
+1. เมื่อคลิกปุ่ม "แก้ไข" จะเรียกฟังก์ชัน `editProduct()` พร้อมส่งข้อมูลสินค้า (รวม `category_id`)
+2. JavaScript จะเติมข้อมูลลงในฟอร์มของ Modal (รวมการเลือกหมวดหมู่)
+3. เมื่อกด Submit จะส่งข้อมูลไปที่ `action.php` พร้อม `action=update`
+4. PHP จะรัน UPDATE Query พร้อมอัปเดต `category_id` และ redirect กลับมาที่ Dashboard
     document.getElementById('editPrice').value = price;
     document.getElementById('editStock').value = stock;
 }
