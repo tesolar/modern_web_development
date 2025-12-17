@@ -1,5 +1,5 @@
 # Modern Web Development
-**18-19ม 20-21 December 2025**
+**18-19, 20-21 December 2025**
 
 **ผู้สอน:** Thanakrit Kraising
 **Email:** thanakritk24001@gmail.com  
